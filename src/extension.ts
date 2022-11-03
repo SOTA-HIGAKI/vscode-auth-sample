@@ -62,14 +62,16 @@ export function activate(context: ExtensionContext) {
 				console.log(response);
 			})
 		} else {
+			const username = await window.showInputBox();
+			const password = await window.showInputBox();
 			const res = await fetch(`http://localhost:8000/auth/login/`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					'username': 'admin',
-					'password': 'thisistest'
+					'username': username,
+					'password': password
 				})
 			});
 			const resJson: Promise<UserData> = res.json();
