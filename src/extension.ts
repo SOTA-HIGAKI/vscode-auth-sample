@@ -272,8 +272,23 @@ export function activate(context: ExtensionContext) {
 				console.log(token)
 			})
 		}
+		const text = getText();
+		console.log(text);
 	}))
 }
+
+export function getText(): string {
+	let editor = window.activeTextEditor;
+	if (!editor) {
+		return "Editor not found!";
+	}
+
+	let selection = editor.selection;
+	let text = selection.isEmpty ? editor.document.getText() : editor.document.getText(selection);
+
+	return text;
+}
+
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
