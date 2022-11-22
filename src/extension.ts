@@ -13,12 +13,18 @@ import {
 	Uri,
 	UriHandler,
 	commands,
-	env
+	env,
+	TerminalLinkContext,
+	Pseudoterminal
 } from 'vscode';
 import { v4 as uuid } from 'uuid';
 import  fetch  from 'node-fetch';
 import { URLSearchParams } from 'url';
 import { PromiseAdapter, promiseFromEvent } from './util';
+import { exec } from 'child_process';
+import * as pty from 'node-pty';
+
+
 
 const SESSIONS_SECRET_KEY = "test_key"
 
@@ -238,7 +244,7 @@ export function activate(context: ExtensionContext) {
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
 	// context.subscriptions.push(new BeEnAuthenticationProvider(context));
-	context.subscriptions.push(commands.registerCommand('vacode-auth.sayHello', async () => {
+	subscriptions.push(commands.registerCommand('vacode-auth.sayHello', async () => {
 		const beforeToken = await context.secrets.get(SESSIONS_SECRET_KEY);
 		if (beforeToken) {
 			console.log('found! token:' + beforeToken)
@@ -251,6 +257,8 @@ export function activate(context: ExtensionContext) {
 			retrieveUserData.json().then( async (response) => {
 				console.log(response);
 			})
+			console.log('前のトークンを削除します。')
+			await context.secrets.delete(SESSIONS_SECRET_KEY)
 		} else {
 			const username = await window.showInputBox({placeHolder: 'username'});
 			const password = await window.showInputBox({placeHolder: 'password'});
@@ -264,16 +272,40 @@ export function activate(context: ExtensionContext) {
 					'password': password
 				})
 			});
-			const resJson: Promise<UserData> = res.json();
-			console.log(resJson);
-			resJson.then( async (data) => {
+			(async () => {
+				const data: UserData = await res.json()
+				console.log(data);
 				await context.secrets.store(SESSIONS_SECRET_KEY, data.access_token);
 				const token = await context.secrets.get(SESSIONS_SECRET_KEY);
 				console.log(token)
-			})
+			})();
+			console.log('login completed.')
 		}
 		const text = getText();
 		console.log(text);
+
+		const activeTerminal = window.activeTerminal
+
+		const pid = await activeTerminal?.processId
+
+		if (!pid) {
+			console.log('active terminal is undefined.')
+		} else {
+			console.log('echo hello to ' + pid);
+			exec('echo $SHELL', (err, stdout, stderr) => {
+				console.log(stdout)
+			})
+		}
+
+		// カーソルを置いたターミナルの行をリアルタイムに読み取る。使い勝手ｘ
+		// window.registerTerminalLinkProvider({
+		// 	provideTerminalLinks: (context: TerminalLinkContext, token) => {
+		// 		console.log(context.line)
+		// 		return [];
+		// 	},
+		// 	handleTerminalLink: () => {},
+		// })
+
 	}))
 }
 
